@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { expectOutOfPosition, initOwnerAndUSDC, owner, POSITION, venusloop, VUSDC } from "./test-base";
-import { bn6, max, erc20s } from "web3-candies";
+import { bn6, max, erc20s } from "@defi.org/web3-candies";
 
 describe("VenusLoop Emergency Tests", () => {
   beforeEach(async () => {
@@ -90,8 +90,6 @@ describe("VenusLoop Emergency Tests", () => {
     await expectOutOfPosition();
 
     // up to 0.1% withdrawal fee
-    expect(await venusloop.methods.getBalanceUSDC().call())
-      .bignumber.closeTo(bn6("1,000,000"), bn6("1,000"))
-      .lessThan(bn6("1,000,000"));
+    expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.closeTo(bn6("1,000,000"), bn6("1,000"));
   });
 });

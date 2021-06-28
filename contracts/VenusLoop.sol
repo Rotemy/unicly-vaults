@@ -135,8 +135,9 @@ contract VenusLoop {
      * Account liquidity in USD, using Venus price oracle
      */
     function getAccountLiquidity() public view returns (uint256) {
-        (uint256 err, uint256 liquidity, uint256 shortfall) =
-            IComptroller(UNITROLLER).getAccountLiquidity(address(this));
+        (uint256 err, uint256 liquidity, uint256 shortfall) = IComptroller(UNITROLLER).getAccountLiquidity(
+            address(this)
+        );
         require(err == 0 && shortfall == 0, "getAccountLiquidity failed");
 
         uint256 price = PriceOracle(IComptroller(UNITROLLER).oracle()).getUnderlyingPrice(VUSDC);
