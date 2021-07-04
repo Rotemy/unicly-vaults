@@ -20,6 +20,7 @@ contract UniclyXUnicVault {
     // TODO: ADD EVENTS
     // TODO: ADD COMMENTS
     // TODO: Adding emergency
+    // TODO: Add readme
 
     // Info of each user.
     struct UserInfo {
@@ -48,7 +49,7 @@ contract UniclyXUnicVault {
         uint256 xUNICBalance = IERC20(UNIC).balanceOf(XUNIC);
         uint256 xUNICSupply = IERC20(XUNIC).totalSupply();
 
-        return (xUNICBalance * PERCENT) / xUNICSupply;
+        return (xUNICBalance * 1e18) / xUNICSupply;
     }
 
     // Withdraw LP tokens from MasterChef.
@@ -141,8 +142,9 @@ contract UniclyXUnicVault {
         uint256 currentBalanceOfUNICs = IERC20(UNIC).balanceOf(address(this));
         IUnicFarm(UNIC_MASTERCHEF).deposit(_pid, 0);
         uint256 addedUNICs = IERC20(UNIC).balanceOf(address(this)) - currentBalanceOfUNICs;
+        IxUNIC(XUNIC).enter(addedUNICs);
 
-        pool.accUNICPerShare += (addedUNICs / pool.totalLPTokens);
+        pool.accUNICPerShare += ((addedUNICs * 1e12) / pool.totalLPTokens);
 
         //        PoolInfo storage pool = poolInfo[_pid];
         //        if (block.number <= pool.lastRewardBlock) {
@@ -172,7 +174,7 @@ contract UniclyXUnicVault {
         uint256 accUNICPerShare = pool.accUNICPerShare + (notClaimedUNICs / pool.totalLPTokens);
         uint256 pendingUNICs = ((accUNICPerShare * user.amount) / 1e12) - user.rewardDebt;
 
-        return ((xUNICRate * PERCENT) / user.xUNICRate) * pendingUNICs;
+        return ((xUNICRate * pendingUNICs) / user.xUNICRate) / xUNICRate;
     }
 
     // Safe unic transfer function, just in case if rounding error causes pool to not have enough xUNICs.

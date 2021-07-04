@@ -18,9 +18,9 @@ describe("Unicly Vaults Sanity Tests", () => {
   });
 
   it("start state", async () => {
-    console.log("uniclyXUnicVault", await uniclyXUnicVault.methods.getXUnicToUnicRate().call());
+    console.log("uniclyXUnicVault", await uniclyXUnicVault.methods.getxUNICRate().call());
 
-    expect(await uniclyXUnicVault.methods.getXUnicToUnicRate().call()).bignumber.gt(bn6("0.1"));
+    expect(await uniclyXUnicVault.methods.getxUNICRate().call()).bignumber.gt(bn6("0.1"));
 
     // expect(await venusloop.methods.getBalanceUSDC().call()).bignumber.zero;
     // await expectOutOfPosition();
