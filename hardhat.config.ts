@@ -33,16 +33,17 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       forking: {
-        url: "https://bsc-dataseed4.binance.org",
+        blockNumber: 12748948,
+        url: "https://eth-mainnet.alchemyapi.io/v2/" + configFile().alchemyKey,
       },
       blockGasLimit: 12e6,
       accounts: {
         accountsBalance: bn18("1,000,000").toString(),
       },
     },
-    bsc: {
-      chainId: bscChainId,
-      url: "https://bsc-dataseed4.binance.org",
+    eth: {
+      chainId: 1,
+      url: "https://eth-mainnet.alchemyapi.io/v2/" + configFile().alchemyKey,
     },
   },
   typechain: {

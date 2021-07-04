@@ -1,11 +1,11 @@
 import BN from "bn.js";
 import { expect } from "chai";
-import { expectOutOfPosition, initOwnerAndUSDC, owner, venusloop, XVS } from "./test-base";
+//import { expectOutOfPosition, initOwnerAndUSDC, owner, venusloop, XVS } from "./test-base";
 import { bn, bn6, contract, erc20s, fmt6, max, mineBlocks, zero } from "@defi.org/web3-candies";
 import { jumpBlocks } from "ethereumjs-hooks";
 import { Abi } from "@defi.org/web3-candies/dist/contracts";
 
-describe("VenusLoop E2E Tests", () => {
+/*describe("VenusLoop E2E Tests", () => {
   beforeEach(async () => {
     await initOwnerAndUSDC();
     await erc20s.bsc.USDC().methods.transfer(venusloop.options.address, bn6("1,000,000")).send({ from: owner });
@@ -127,9 +127,7 @@ describe("VenusLoop E2E Tests", () => {
     );
     expect(endLiquidity).bignumber.lt(startLiquidity).gt(zero); // must be > 0 to not be liquidated
   });
-});
-
-function apyFromRewards(perDay: BN, principal: BN) {
+})*/ function apyFromRewards(perDay: BN, principal: BN) {
   console.log("profit from rewards per day", fmt6(perDay));
   const dailyRate = perDay.mul(bn6("1")).div(principal); // percent from principal
   console.log("dailyRate:", fmt6(dailyRate.muln(100)), "%");
