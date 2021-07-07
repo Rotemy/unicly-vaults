@@ -4,16 +4,7 @@ import "hardhat-gas-reporter";
 import "hardhat-tracer";
 import "@nomiclabs/hardhat-web3";
 import "@nomiclabs/hardhat-etherscan";
-import { task } from "hardhat/config";
 import { askAddress, bn18, bscChainId, deploy } from "@defi.org/web3-candies";
-
-task("deploy").setAction(async () => {
-  const name = "VenusLoop";
-  const owner = await askAddress("owner address 0x");
-  const gasLimit = 2_000_000;
-
-  await deploy(name, [owner], gasLimit, 0, false);
-});
 
 function configFile() {
   return require("./.config.json");
@@ -21,7 +12,7 @@ function configFile() {
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.4",
+    version: "0.6.12",
     settings: {
       optimizer: {
         enabled: true,
