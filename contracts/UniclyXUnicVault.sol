@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "./interfaces/IUnicFarm.sol";
 import "./interfaces/IUnicGallery.sol";
 import "hardhat/console.sol";
@@ -65,7 +65,8 @@ contract UniclyXUnicVault {
             user.amount -= _amount;
             pool.totalLPTokens -= _amount;
             IUnicFarm(UNIC_MASTERCHEF).withdraw(_pid, _amount);
-            IUnicFarm(UNIC_MASTERCHEF).poolInfo(_pid).lpToken.safeTransfer(address(msg.sender), _amount);
+            (IERC20 lpToken,,,,) = IUnicFarm(UNIC_MASTERCHEF).poolInfo(_pid);
+            lpToken.safeTransfer(address(msg.sender), _amount);
         }
         user.xUNICRate = getxUNICRate();
         user.rewardDebt = (user.amount * pool.accUNICPerShare) / 1e12;
@@ -94,7 +95,8 @@ contract UniclyXUnicVault {
             }
         }
         if (_amount > 0) {
-            IUnicFarm(UNIC_MASTERCHEF).poolInfo(_pid).lpToken.safeTransferFrom(
+            (IERC20 lpToken,,,,) = IUnicFarm(UNIC_MASTERCHEF).poolInfo(_pid);
+            lpToken.safeTransferFrom(
                 address(msg.sender),
                 address(this),
                 _amount
