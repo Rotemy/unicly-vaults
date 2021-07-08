@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.12;
 
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "./interfaces/IUnicFarm.sol";
 import "./interfaces/IUnicGallery.sol";
 import "hardhat/console.sol";
 
-contract UniclyXUnicVault {
+contract UniclyXUnicVault is OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
     uint256 public constant PERCENT = 100_000; // percentmil, 1/100,000
@@ -42,6 +43,10 @@ contract UniclyXUnicVault {
 
     // Info of each pool.
     PoolInfo[] public poolInfo;
+
+    function initialize() external initializer {
+        __Ownable_init();
+    }
 
     // Current rate of xUNIC
     function getxUNICRate() public view returns (uint256) {
@@ -169,6 +174,7 @@ contract UniclyXUnicVault {
         UserInfo storage user = userInfo[_pid][_user];
 
         uint256 xUNICRate = getxUNICRate();
+        // in case of a vulnerability in xUNIC would we want to disable withdrawals like this?
         require(xUNICRate >= user.xUNICRate, "xUNIC rate lower??");
 
         uint256 notClaimedUNICs = IUnicFarm(UNIC_MASTERCHEF).pendingUnic(_pid, address(this));
