@@ -11,8 +11,6 @@ import "hardhat/console.sol";
 contract UniclyXUnicVault is OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
-    uint256 public constant PERCENT = 100_000; // percentmil, 1/100,000
-
     address public constant XUNIC = address(0xA62fB0c2Fb3C7b27797dC04e1fEA06C0a2Db919a);
     address public constant UNIC = address(0x94E0BAb2F6Ab1F19F4750E42d7349f2740513aD5);
     address public constant UNIC_MASTERCHEF = address(0x4A25E4DF835B605A5848d2DB450fA600d96ee818);
