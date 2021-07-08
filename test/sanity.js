@@ -13,6 +13,7 @@ describe("UniclyXUnicVault", function () {
   let uniclyXUnicVault;
   let unicToken;
   let xUnicToken;
+  let unicEthLpToken;
   let owner;
   let addr1;
   let addr2;
@@ -28,7 +29,7 @@ describe("UniclyXUnicVault", function () {
     const unicswapRouter = new ethers.Contract(unicswapRouterAddress, unicswapRouterAbi, owner);
     unicToken = new ethers.Contract(unicAddress, erc20Abi, owner);
     xUnicToken = new ethers.Contract(xUnicAddress, erc20Abi, owner);
-    const unicEthLpToken = new ethers.Contract(unicEthLpAddress, erc20Abi, owner);
+    unicEthLpToken = new ethers.Contract(unicEthLpAddress, erc20Abi, addr1);
     const prevUnicBalance = await unicToken.balanceOf(owner.address);
     console.log(`prev UNIC balance: ${prevUnicBalance.toString()}`);
     const lastBlockNumber = await ethers.provider.getBlockNumber();
@@ -59,26 +60,17 @@ describe("UniclyXUnicVault", function () {
     console.log(`post UNICETH balance: ${postUnicEthBalance.toString()}`);
   });
 
-  // You can nest describe calls to create subsections.
-  describe("Deployment", function () {
-    it("Should assign the total supply of tokens to the owner", async function () {
-      //const ownerBalance = await hardhatToken.balanceOf(owner.address);
-      //expect(await hardhatToken.totalSupply()).to.equal(ownerBalance);
-    });
-  });
-
   describe("Staking rewards", function () {
-    //it("Should transfer tokens between accounts", async function () {
-      //// Transfer 50 tokens from owner to addr1
-      //await hardhatToken.transfer(addr1.address, 50);
-      //const addr1Balance = await hardhatToken.balanceOf(addr1.address);
+    it("Should stake UNICETH-LP", async function () {
+      let userStakeInfo;
+      userStakeInfo = await uniclyXUnicVault.userInfo(0, addr1.address);
+      console.log(userStakeInfo);
+      await unicEthLpToken.approve(uniclyXUnicVault.address, ethers.utils.parseEther("10000"));
+      console.log(addr1.address);
+      await uniclyXUnicVault.connect(addr1).deposit(0, ethers.utils.parseEther("1"));
+      userStakeInfo = await uniclyXUnicVault.userInfo(0, addr1.address);
+      console.log(userStakeInfo);
       //expect(addr1Balance).to.equal(50);
-
-      //// Transfer 50 tokens from addr1 to addr2
-      //// We use .connect(signer) to send a transaction from another account
-      //await hardhatToken.connect(addr1).transfer(addr2.address, 50);
-      //const addr2Balance = await hardhatToken.balanceOf(addr2.address);
-      //expect(addr2Balance).to.equal(50);
-    //});
+    });
   });
 });

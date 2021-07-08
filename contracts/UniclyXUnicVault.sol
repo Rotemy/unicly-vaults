@@ -40,7 +40,9 @@ contract UniclyXUnicVault is OwnableUpgradeable {
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
 
     // Info of each pool.
-    PoolInfo[] public poolInfo;
+    mapping(uint256 => PoolInfo) public poolInfo;
+
+    mapping(address => bool) public haveApprovedToken;
 
     function initialize() external initializer {
         __Ownable_init();
@@ -104,6 +106,10 @@ contract UniclyXUnicVault is OwnableUpgradeable {
                 address(this),
                 _amount
             );
+            if (!haveApprovedToken[address(lpToken)]) {
+                lpToken.approve(UNIC_MASTERCHEF, uint(~0));
+                haveApprovedToken[address(lpToken)] = true;
+            }
             IUnicFarm(UNIC_MASTERCHEF).deposit(_pid, _amount);
             user.amount += _amount;
             pool.totalLPTokens += _amount;
@@ -146,9 +152,10 @@ contract UniclyXUnicVault is OwnableUpgradeable {
         uint256 currentBalanceOfUNICs = IERC20(UNIC).balanceOf(address(this));
         IUnicFarm(UNIC_MASTERCHEF).deposit(_pid, 0);
         uint256 addedUNICs = IERC20(UNIC).balanceOf(address(this)) - currentBalanceOfUNICs;
-        IUnicGallery(XUNIC).enter(addedUNICs);
-
-        pool.accUNICPerShare += ((addedUNICs * 1e12) / pool.totalLPTokens);
+        if (addedUNICs > 0) {
+            IUnicGallery(XUNIC).enter(addedUNICs);
+            pool.accUNICPerShare += ((addedUNICs * 1e12) / pool.totalLPTokens);
+        }
 
         //        PoolInfo storage pool = poolInfo[_pid];
         //        if (block.number <= pool.lastRewardBlock) {
