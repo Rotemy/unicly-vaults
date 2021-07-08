@@ -75,17 +75,6 @@ contract UniclyXUnicVault is OwnableUpgradeable {
         }
         user.xUNICRate = getxUNICRate();
         user.rewardDebt = (user.amount * pool.accUNICPerShare) / 1e12;
-
-        //        PoolInfo storage pool = poolInfo[_pid];
-        //        UserInfo storage user = userInfo[_pid][msg.sender];
-        //        require(user.amount >= _amount, "withdraw: not good");
-        //        updatePool(_pid);
-        //        uint256 pending = user.amount.mul(pool.accSushiPerShare).div(1e12).sub(user.rewardDebt);
-        //        safeSushiTransfer(msg.sender, pending);
-        //        user.amount = user.amount.sub(_amount);
-        //        user.rewardDebt = user.amount.mul(pool.accSushiPerShare).div(1e12);
-        //        pool.lpToken.safeTransfer(address(msg.sender), _amount);
-        //        emit Withdraw(msg.sender, _pid, _amount);
     }
 
     // Deposit LP tokens to MasterChef for unics allocation.
@@ -116,22 +105,6 @@ contract UniclyXUnicVault is OwnableUpgradeable {
         }
         user.xUNICRate = getxUNICRate();
         user.rewardDebt = (user.amount * pool.accUNICPerShare) / 1e12;
-
-        //        PoolInfo storage pool = poolInfo[_pid];
-        //        UserInfo storage user = userInfo[_pid][msg.sender];
-        //        updatePool(_pid);
-        //        if (user.amount > 0) {
-        //            uint256 pending = user.amount.mul(pool.accUnicPerShare).div(1e12).sub(user.rewardDebt);
-        //            if(pending > 0) {
-        //                safeUnicTransfer(msg.sender, pending);
-        //            }
-        //        }
-        //        if(_amount > 0) {
-        //            pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-        //            user.amount = user.amount.add(_amount);
-        //        }
-        //        user.rewardDebt = user.amount.mul(pool.accUnicPerShare).div(1e12);
-        //        emit Deposit(msg.sender, _pid, _amount);
     }
 
     function doHardWork() public {
@@ -156,22 +129,6 @@ contract UniclyXUnicVault is OwnableUpgradeable {
             IUnicGallery(XUNIC).enter(addedUNICs);
             pool.accUNICPerShare += ((addedUNICs * 1e12) / pool.totalLPTokens);
         }
-
-        //        PoolInfo storage pool = poolInfo[_pid];
-        //        if (block.number <= pool.lastRewardBlock) {
-        //            return;
-        //        }
-        //        uint256 lpSupply = pool.lpToken.balanceOf(address(this));
-        //        if (lpSupply == 0) {
-        //            pool.lastRewardBlock = block.number;
-        //            return;
-        //        }
-        //        uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        //        uint256 sushiReward = multiplier.mul(sushiPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
-        //        sushi.mint(devaddr, sushiReward.div(10));
-        //        sushi.mint(address(this), sushiReward);
-        //        pool.accSushiPerShare = pool.accSushiPerShare.add(sushiReward.mul(1e12).div(lpSupply));
-        //        pool.lastRewardBlock = block.number;
     }
 
     function pendingxUNICs(uint256 _pid, address _user) public view returns (uint256) {
