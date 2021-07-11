@@ -46,6 +46,7 @@ contract UniclyXUnicVault is OwnableUpgradeable {
 
     function initialize() external initializer {
         __Ownable_init();
+        IERC20(UNIC).approve(XUNIC, uint(~0));
     }
 
     // Current rate of xUNIC

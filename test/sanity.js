@@ -24,14 +24,13 @@ describe("UniclyXUnicVault", function () {
     [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
     uniclyXUnicVault = await uniclyXUnicVaultFactory.deploy();
     await uniclyXUnicVault.deployed();
+    await uniclyXUnicVault.initialize();
 
     // purchase UNIC
     const unicswapRouter = new ethers.Contract(unicswapRouterAddress, unicswapRouterAbi, owner);
     unicToken = new ethers.Contract(unicAddress, erc20Abi, owner);
     xUnicToken = new ethers.Contract(xUnicAddress, erc20Abi, owner);
     unicEthLpToken = new ethers.Contract(unicEthLpAddress, erc20Abi, addr1);
-    const prevUnicBalance = await unicToken.balanceOf(owner.address);
-    console.log(`prev UNIC balance: ${prevUnicBalance.toString()}`);
     const lastBlockNumber = await ethers.provider.getBlockNumber();
     const lastBlockTimestamp = (await ethers.provider.getBlock(lastBlockNumber)).timestamp;
     const deadline = String(lastBlockTimestamp + 1000000);
@@ -42,11 +41,7 @@ describe("UniclyXUnicVault", function () {
       deadline,
       { value: ethers.utils.parseEther("100") }
     );
-    const postUnicBalance = await unicToken.balanceOf(owner.address);
-    console.log(`post UNIC balance: ${postUnicBalance.toString()}`);
     await unicToken.approve(unicswapRouterAddress, ethers.utils.parseEther("10000"));
-    const prevUnicEthBalance = await unicEthLpToken.balanceOf(addr1.address);
-    console.log(`prev UNICETH balance: ${prevUnicEthBalance.toString()}`);
     await unicswapRouter.addLiquidityETH(
       unicAddress,
       ethers.utils.parseEther("20"),
@@ -56,21 +51,40 @@ describe("UniclyXUnicVault", function () {
       deadline,
       { value: ethers.utils.parseEther("2") }
     );
-    const postUnicEthBalance = await unicEthLpToken.balanceOf(addr1.address);
-    console.log(`post UNICETH balance: ${postUnicEthBalance.toString()}`);
+    await unicswapRouter.addLiquidityETH(
+      unicAddress,
+      ethers.utils.parseEther("20"),
+      "1",
+      "1",
+      addr2.address,
+      deadline,
+      { value: ethers.utils.parseEther("2") }
+    );
   });
 
   describe("Staking rewards", function () {
-    it("Should stake UNICETH-LP", async function () {
+    it("Should stake UNICETH-LP and have proper amount, rate", async function () {
       let userStakeInfo;
+      const xUnicUnicBalance = await unicToken.balanceOf(xUnicAddress);
+      const xUnicTotalSupply = await xUnicToken.totalSupply();
+      const xUnicRate = xUnicUnicBalance.mul(ethers.utils.parseEther('1')).div(xUnicTotalSupply);
       userStakeInfo = await uniclyXUnicVault.userInfo(0, addr1.address);
-      console.log(userStakeInfo);
+      expect(userStakeInfo.amount.toString()).to.equal('0');
       await unicEthLpToken.approve(uniclyXUnicVault.address, ethers.utils.parseEther("10000"));
-      console.log(addr1.address);
       await uniclyXUnicVault.connect(addr1).deposit(0, ethers.utils.parseEther("1"));
       userStakeInfo = await uniclyXUnicVault.userInfo(0, addr1.address);
-      console.log(userStakeInfo);
-      //expect(addr1Balance).to.equal(50);
+      expect(userStakeInfo.amount.toString()).to.equal(ethers.utils.parseEther("1"));
+      expect(userStakeInfo.xUNICRate.toString()).to.equal(xUnicRate.toString());
+    });
+
+    it("Rate should increase as xUnic pool grows", async function () {
+      await unicToken.transfer(xUnicAddress, ethers.utils.parseEther("1"));
+      await unicEthLpToken.connect(addr2).approve(uniclyXUnicVault.address, ethers.utils.parseEther("10000"));
+      await uniclyXUnicVault.connect(addr2).deposit(0, ethers.utils.parseEther("1"));
+      const user1StakeInfo = await uniclyXUnicVault.userInfo(0, addr1.address);
+      const user2StakeInfo = await uniclyXUnicVault.userInfo(0, addr2.address);
+      const rateDiff = user2StakeInfo.xUNICRate.sub(user1StakeInfo.xUNICRate);
+      expect(rateDiff.toNumber()).to.be.at.least(1);
     });
   });
 });
