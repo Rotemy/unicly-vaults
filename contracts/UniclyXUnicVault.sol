@@ -128,15 +128,18 @@ contract UniclyXUnicVault is OwnableUpgradeable {
     }
 
     function pendingxUNICs(uint256 _pid, address _user) public view returns (uint256) {
-        PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][_user];
+        PoolInfo memory pool = poolInfo[_pid];
+        UserInfo memory user = userInfo[_pid][_user];
 
-        uint256 xUNICRate = getxUNICRate();
-
+        // for frontend
         uint256 notClaimedUNICs = IUnicFarm(UNIC_MASTERCHEF).pendingUnic(_pid, address(this));
-        uint256 accXUNICPerShare = pool.accXUNICPerShare + ((notClaimedUNICs * 1e18 / xUNICRate) * 1e12 / pool.totalLPTokens);
-        uint256 pendingXUNICs = ((accXUNICPerShare * user.amount) / 1e12) - user.rewardDebt;
-
+        if (notClaimedUNICs > 0) {
+            uint256 xUNICRate = getxUNICRate();
+            uint256 accXUNICPerShare = pool.accXUNICPerShare + ((notClaimedUNICs * 1e18 / xUNICRate) * 1e12 / pool.totalLPTokens);
+            uint256 pendingXUNICs = ((accXUNICPerShare * user.amount) / 1e12) - user.rewardDebt;
+            return pendingXUNICs;
+        }
+        uint256 pendingXUNICs = ((pool.accXUNICPerShare * user.amount) / 1e12) - user.rewardDebt;
         return pendingXUNICs;
     }
 
