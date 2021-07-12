@@ -24,7 +24,7 @@ describe("UniclyXUnicVault", function () {
     [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
     uniclyXUnicVault = await uniclyXUnicVaultFactory.deploy();
     await uniclyXUnicVault.deployed();
-    await uniclyXUnicVault.initialize();
+    await uniclyXUnicVault.initialize(owner.address, '100');
 
     // purchase UNIC
     const unicswapRouter = new ethers.Contract(unicswapRouterAddress, unicswapRouterAbi, owner);
@@ -64,29 +64,41 @@ describe("UniclyXUnicVault", function () {
 
   describe("Staking rewards", function () {
     it("Should stake UNICETH-LP and have proper amount" , async function () {
-      let userStakeInfo;
-      userStakeInfo = await uniclyXUnicVault.userInfo(0, addr1.address);
-      expect(userStakeInfo.amount.toString()).to.equal('0');
+      let user1StakeInfo, user2StakeInfo;
+      user1StakeInfo = await uniclyXUnicVault.userInfo(0, addr1.address);
+      expect(user1StakeInfo.amount.toString()).to.equal('0');
       await unicEthLpToken.approve(uniclyXUnicVault.address, ethers.utils.parseEther("10000"));
-      await uniclyXUnicVault.connect(addr1).deposit(0, ethers.utils.parseEther("1"));
-      userStakeInfo = await uniclyXUnicVault.userInfo(0, addr1.address);
-      expect(userStakeInfo.amount.toString()).to.equal(ethers.utils.parseEther("1"));
+      await unicEthLpToken.connect(addr2).approve(uniclyXUnicVault.address, ethers.utils.parseEther("10000"));
+      await uniclyXUnicVault.connect(addr1).deposit(0, ethers.utils.parseEther("2"));
+      await uniclyXUnicVault.connect(addr2).deposit(0, ethers.utils.parseEther("1"));
+      user1StakeInfo = await uniclyXUnicVault.userInfo(0, addr1.address);
+      user2StakeInfo = await uniclyXUnicVault.userInfo(0, addr2.address);
+      expect(user1StakeInfo.amount.toString()).to.equal(ethers.utils.parseEther("2"));
+      expect(user2StakeInfo.amount.toString()).to.equal(ethers.utils.parseEther("1"));
     });
 
     it("Should allow a user to withdraw all", async function () {
       const user1PrevUnicEthBalance = await unicEthLpToken.balanceOf(addr1.address);
       const user1PrevXUnicBalance = await xUnicToken.balanceOf(addr1.address);
-      await uniclyXUnicVault.connect(addr1).withdraw(0, ethers.utils.parseEther("1"));
+      await uniclyXUnicVault.connect(addr1).withdraw(0, ethers.utils.parseEther("2"));
       const user1PostUnicEthBalance = await unicEthLpToken.balanceOf(addr1.address);
       const user1PostXUnicBalance = await xUnicToken.balanceOf(addr1.address);
       const user1StakeInfo = await uniclyXUnicVault.userInfo(0, addr1.address);
-      expect(user1PostUnicEthBalance.sub(user1PrevUnicEthBalance)).to.equal(ethers.utils.parseEther("1"));
+      expect(user1PostUnicEthBalance.sub(user1PrevUnicEthBalance)).to.equal(ethers.utils.parseEther("2"));
       expect(user1PostXUnicBalance.sub(user1PrevXUnicBalance).toNumber()).to.be.at.least(1);
       expect(user1StakeInfo.amount.toNumber()).to.equal(0);
-      console.log(user1PostXUnicBalance.toString())
     });
 
     it("Should allow a user to partially withdraw", async function () {
+      const user2PrevUnicEthBalance = await unicEthLpToken.balanceOf(addr2.address);
+      const user2PrevXUnicBalance = await xUnicToken.balanceOf(addr2.address);
+      await uniclyXUnicVault.connect(addr2).withdraw(0, ethers.utils.parseEther("0.1"));
+      const user2PostUnicEthBalance = await unicEthLpToken.balanceOf(addr2.address);
+      const user2PostXUnicBalance = await xUnicToken.balanceOf(addr2.address);
+      const user2StakeInfo = await uniclyXUnicVault.userInfo(0, addr2.address);
+      expect(user2PostUnicEthBalance.sub(user2PrevUnicEthBalance)).to.equal(ethers.utils.parseEther("0.1"));
+      expect(user2PostXUnicBalance.sub(user2PrevXUnicBalance).toNumber()).to.be.at.least(1);
+      expect(user2StakeInfo.amount).to.equal(ethers.utils.parseEther("0.9"));
     });
 
   });

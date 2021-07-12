@@ -40,8 +40,16 @@ contract UniclyXUnicVault is OwnableUpgradeable {
 
     mapping(address => bool) public haveApprovedToken;
 
-    function initialize() external initializer {
+    address public devAddress;
+    uint public devFee;
+    uint public maxDevFee = 150;
+    uint public devFeeDenominator = 1000;
+
+    function initialize(address _devAddress, uint _devFee) external initializer {
         __Ownable_init();
+        devAddress = _devAddress;
+        devFee = _devFee;
+        require(devFee <= maxDevFee, "dev fee");
         IERC20(UNIC).approve(XUNIC, uint(~0));
     }
 
@@ -123,6 +131,9 @@ contract UniclyXUnicVault is OwnableUpgradeable {
         if (UNICBalance > 0) {
             IUnicGallery(XUNIC).enter(UNICBalance);
             uint addedXUNICs = IERC20(XUNIC).balanceOf(address(this)) - prevXUNICBalance;
+            uint devAmount = addedXUNICs * devFee / devFeeDenominator;
+            IERC20(XUNIC).transfer(devAddress, devAmount);
+            addedXUNICs -= devAmount;
             pool.accXUNICPerShare += ((addedXUNICs * 1e12) / pool.totalLPTokens);
         }
     }
