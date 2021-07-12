@@ -86,5 +86,21 @@ describe("UniclyXUnicVault", function () {
       const rateDiff = user2StakeInfo.xUNICRate.sub(user1StakeInfo.xUNICRate);
       expect(rateDiff.toNumber()).to.be.at.least(1);
     });
+
+    it("Should allow a user to withdraw all", async function () {
+      const user1PrevUnicEthBalance = await unicEthLpToken.balanceOf(addr1.address);
+      const user1PrevXUnicBalance = await xUnicToken.balanceOf(addr1.address);
+      await uniclyXUnicVault.connect(addr1).withdraw(0, ethers.utils.parseEther("1"));
+      const user1PostUnicEthBalance = await unicEthLpToken.balanceOf(addr1.address);
+      const user1PostXUnicBalance = await xUnicToken.balanceOf(addr1.address);
+      const user1StakeInfo = await uniclyXUnicVault.userInfo(0, addr1.address);
+      expect(user1PostUnicEthBalance.sub(user1PrevUnicEthBalance)).to.equal(ethers.utils.parseEther("1"));
+      expect(user1PostXUnicBalance.sub(user1PrevXUnicBalance).toNumber()).to.be.at.least(1);
+      expect(user1StakeInfo.amount.toNumber()).to.equal(0);
+    });
+
+    it("Should allow a user to partially withdraw", async function () {
+    });
+
   });
 });
