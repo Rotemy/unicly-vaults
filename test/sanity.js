@@ -63,28 +63,14 @@ describe("UniclyXUnicVault", function () {
   });
 
   describe("Staking rewards", function () {
-    it("Should stake UNICETH-LP and have proper amount, rate", async function () {
+    it("Should stake UNICETH-LP and have proper amount" , async function () {
       let userStakeInfo;
-      const xUnicUnicBalance = await unicToken.balanceOf(xUnicAddress);
-      const xUnicTotalSupply = await xUnicToken.totalSupply();
-      const xUnicRate = xUnicUnicBalance.mul(ethers.utils.parseEther('1')).div(xUnicTotalSupply);
       userStakeInfo = await uniclyXUnicVault.userInfo(0, addr1.address);
       expect(userStakeInfo.amount.toString()).to.equal('0');
       await unicEthLpToken.approve(uniclyXUnicVault.address, ethers.utils.parseEther("10000"));
       await uniclyXUnicVault.connect(addr1).deposit(0, ethers.utils.parseEther("1"));
       userStakeInfo = await uniclyXUnicVault.userInfo(0, addr1.address);
       expect(userStakeInfo.amount.toString()).to.equal(ethers.utils.parseEther("1"));
-      expect(userStakeInfo.xUNICRate.toString()).to.equal(xUnicRate.toString());
-    });
-
-    it("Rate should increase as xUnic pool grows", async function () {
-      await unicToken.transfer(xUnicAddress, ethers.utils.parseEther("1"));
-      await unicEthLpToken.connect(addr2).approve(uniclyXUnicVault.address, ethers.utils.parseEther("10000"));
-      await uniclyXUnicVault.connect(addr2).deposit(0, ethers.utils.parseEther("1"));
-      const user1StakeInfo = await uniclyXUnicVault.userInfo(0, addr1.address);
-      const user2StakeInfo = await uniclyXUnicVault.userInfo(0, addr2.address);
-      const rateDiff = user2StakeInfo.xUNICRate.sub(user1StakeInfo.xUNICRate);
-      expect(rateDiff.toNumber()).to.be.at.least(1);
     });
 
     it("Should allow a user to withdraw all", async function () {
@@ -97,6 +83,7 @@ describe("UniclyXUnicVault", function () {
       expect(user1PostUnicEthBalance.sub(user1PrevUnicEthBalance)).to.equal(ethers.utils.parseEther("1"));
       expect(user1PostXUnicBalance.sub(user1PrevXUnicBalance).toNumber()).to.be.at.least(1);
       expect(user1StakeInfo.amount.toNumber()).to.equal(0);
+      console.log(user1PostXUnicBalance.toString())
     });
 
     it("Should allow a user to partially withdraw", async function () {

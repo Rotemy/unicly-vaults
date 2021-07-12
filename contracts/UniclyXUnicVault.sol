@@ -23,17 +23,13 @@ contract UniclyXUnicVault is OwnableUpgradeable {
     // Info of each user.
     struct UserInfo {
         uint256 amount; // How many LP tokens the user has provided.
-        uint256 xUNICRate; // What was the rate when the user staked LP tokens
         uint256 rewardDebt; // How much to remove when calculating user shares
-
-        // Every time users stake LP tokens or withdraw xUNICs,
-        // we are sending xUNICs to them and resetting the xUNICRate
     }
 
     // Info of each pool.
     struct PoolInfo {
         uint256 totalLPTokens; // The total LP tokens staked
-        uint256 accUNICPerShare; //Accumulated UNICs per share, times 1e12
+        uint256 accXUNICPerShare; //Accumulated UNICs per share, times 1e12
     }
 
     // Info of each user that stakes LP tokens.
@@ -74,8 +70,7 @@ contract UniclyXUnicVault is OwnableUpgradeable {
             (IERC20 lpToken,,,,) = IUnicFarm(UNIC_MASTERCHEF).poolInfo(_pid);
             lpToken.safeTransfer(address(msg.sender), _amount);
         }
-        user.xUNICRate = getxUNICRate();
-        user.rewardDebt = (user.amount * pool.accUNICPerShare) / 1e12;
+        user.rewardDebt = (user.amount * pool.accXUNICPerShare) / 1e12;
     }
 
     // Deposit LP tokens to MasterChef for unics allocation.
@@ -104,8 +99,7 @@ contract UniclyXUnicVault is OwnableUpgradeable {
             user.amount += _amount;
             pool.totalLPTokens += _amount;
         }
-        user.xUNICRate = getxUNICRate();
-        user.rewardDebt = (user.amount * pool.accUNICPerShare) / 1e12;
+        user.rewardDebt = (user.amount * pool.accXUNICPerShare) / 1e12;
     }
 
     function doHardWork() public {
@@ -123,12 +117,13 @@ contract UniclyXUnicVault is OwnableUpgradeable {
     function updatePool(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
 
-        uint256 currentBalanceOfUNICs = IERC20(UNIC).balanceOf(address(this));
+        uint prevXUNICBalance = IERC20(XUNIC).balanceOf(address(this));
         IUnicFarm(UNIC_MASTERCHEF).deposit(_pid, 0);
-        uint256 addedUNICs = IERC20(UNIC).balanceOf(address(this)) - currentBalanceOfUNICs;
-        if (addedUNICs > 0) {
-            IUnicGallery(XUNIC).enter(addedUNICs);
-            pool.accUNICPerShare += ((addedUNICs * 1e12) / pool.totalLPTokens);
+        uint256 UNICBalance = IERC20(UNIC).balanceOf(address(this));
+        if (UNICBalance > 0) {
+            IUnicGallery(XUNIC).enter(UNICBalance);
+            uint addedXUNICs = IERC20(XUNIC).balanceOf(address(this)) - prevXUNICBalance;
+            pool.accXUNICPerShare += ((addedXUNICs * 1e12) / pool.totalLPTokens);
         }
     }
 
@@ -137,14 +132,12 @@ contract UniclyXUnicVault is OwnableUpgradeable {
         UserInfo storage user = userInfo[_pid][_user];
 
         uint256 xUNICRate = getxUNICRate();
-        // in case of a vulnerability in xUNIC would we want to disable withdrawals like this?
-        require(xUNICRate >= user.xUNICRate, "xUNIC rate lower??");
 
         uint256 notClaimedUNICs = IUnicFarm(UNIC_MASTERCHEF).pendingUnic(_pid, address(this));
-        uint256 accUNICPerShare = pool.accUNICPerShare + (notClaimedUNICs / pool.totalLPTokens);
-        uint256 pendingUNICs = ((accUNICPerShare * user.amount) / 1e12) - user.rewardDebt;
+        uint256 accXUNICPerShare = pool.accXUNICPerShare + ((notClaimedUNICs * 1e18 / xUNICRate) * 1e12 / pool.totalLPTokens);
+        uint256 pendingXUNICs = ((accXUNICPerShare * user.amount) / 1e12) - user.rewardDebt;
 
-        return ((xUNICRate * pendingUNICs) / user.xUNICRate);
+        return pendingXUNICs;
     }
 
     // Safe unic transfer function, just in case if rounding error causes pool to not have enough xUNICs.
