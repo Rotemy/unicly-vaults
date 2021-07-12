@@ -144,7 +144,7 @@ contract UniclyXUnicVault is OwnableUpgradeable {
         uint256 accUNICPerShare = pool.accUNICPerShare + (notClaimedUNICs / pool.totalLPTokens);
         uint256 pendingUNICs = ((accUNICPerShare * user.amount) / 1e12) - user.rewardDebt;
 
-        return ((xUNICRate * pendingUNICs) / user.xUNICRate) / xUNICRate;
+        return ((xUNICRate * pendingUNICs) / user.xUNICRate);
     }
 
     // Safe unic transfer function, just in case if rounding error causes pool to not have enough xUNICs.
