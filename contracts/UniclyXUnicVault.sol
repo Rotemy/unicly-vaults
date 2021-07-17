@@ -17,9 +17,6 @@ contract UniclyXUnicVault is OwnableUpgradeable {
     address public constant UNIC_MASTERCHEF = address(0x4A25E4DF835B605A5848d2DB450fA600d96ee818);
 
     // TODO: ADD EVENTS
-    // TODO: ADD COMMENTS
-    // TODO: Adding emergency
-    // TODO: Add readme
 
     // Info of each user.
     struct UserInfo {
