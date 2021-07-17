@@ -4,11 +4,12 @@ pragma solidity 0.6.12;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./interfaces/IUnicFarm.sol";
 import "./interfaces/IUnicGallery.sol";
-import "hardhat/console.sol";
 
 contract UniclyXUnicVault is OwnableUpgradeable {
+    using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     address public constant XUNIC = address(0xA62fB0c2Fb3C7b27797dC04e1fEA06C0a2Db919a);
@@ -38,8 +39,10 @@ contract UniclyXUnicVault is OwnableUpgradeable {
     // Info of each pool.
     mapping(uint256 => PoolInfo) public poolInfo;
 
+    // Gas optimization for approving tokens to unic chef
     mapping(address => bool) public haveApprovedToken;
 
+    // dev fee
     address public devAddress;
     uint public devFee;
     uint public maxDevFee = 150;
@@ -58,7 +61,7 @@ contract UniclyXUnicVault is OwnableUpgradeable {
         uint256 xUNICBalance = IERC20(UNIC).balanceOf(XUNIC);
         uint256 xUNICSupply = IERC20(XUNIC).totalSupply();
 
-        return (xUNICBalance * 1e18) / xUNICSupply;
+        return xUNICBalance.mul(1e18).div(xUNICSupply);
     }
 
     // Withdraw LP tokens from MasterChef.
@@ -72,13 +75,13 @@ contract UniclyXUnicVault is OwnableUpgradeable {
             safexUNICTransfer(msg.sender, pending);
         }
         if (_amount > 0) {
-            user.amount -= _amount;
-            pool.totalLPTokens -= _amount;
+            user.amount = user.amount.sub(_amount);
+            pool.totalLPTokens = pool.totalLPTokens.sub(_amount);
             IUnicFarm(UNIC_MASTERCHEF).withdraw(_pid, _amount);
             (IERC20 lpToken,,,,) = IUnicFarm(UNIC_MASTERCHEF).poolInfo(_pid);
             lpToken.safeTransfer(address(msg.sender), _amount);
         }
-        user.rewardDebt = (user.amount * pool.accXUNICPerShare) / 1e12;
+        user.rewardDebt = user.amount.mul(pool.accXUNICPerShare).div(1e12);
     }
 
     // Deposit LP tokens to MasterChef for unics allocation.
@@ -104,10 +107,10 @@ contract UniclyXUnicVault is OwnableUpgradeable {
                 haveApprovedToken[address(lpToken)] = true;
             }
             IUnicFarm(UNIC_MASTERCHEF).deposit(_pid, _amount);
-            user.amount += _amount;
-            pool.totalLPTokens += _amount;
+            user.amount = user.amount.add(_amount);
+            pool.totalLPTokens = pool.totalLPTokens.add(_amount);
         }
-        user.rewardDebt = (user.amount * pool.accXUNICPerShare) / 1e12;
+        user.rewardDebt = user.amount.mul(pool.accXUNICPerShare).div(1e12);
     }
 
     function doHardWork() public {
@@ -130,11 +133,11 @@ contract UniclyXUnicVault is OwnableUpgradeable {
         uint256 UNICBalance = IERC20(UNIC).balanceOf(address(this));
         if (UNICBalance > 0) {
             IUnicGallery(XUNIC).enter(UNICBalance);
-            uint addedXUNICs = IERC20(XUNIC).balanceOf(address(this)) - prevXUNICBalance;
-            uint devAmount = addedXUNICs * devFee / devFeeDenominator;
+            uint addedXUNICs = IERC20(XUNIC).balanceOf(address(this)).sub(prevXUNICBalance);
+            uint devAmount = addedXUNICs.mul(devFee).div(devFeeDenominator);
             IERC20(XUNIC).transfer(devAddress, devAmount);
-            addedXUNICs -= devAmount;
-            pool.accXUNICPerShare += ((addedXUNICs * 1e12) / pool.totalLPTokens);
+            addedXUNICs = addedXUNICs.sub(devAmount);
+            pool.accXUNICPerShare = pool.accXUNICPerShare.add(addedXUNICs.mul(1e12).div(pool.totalLPTokens));
         }
     }
 
@@ -146,11 +149,11 @@ contract UniclyXUnicVault is OwnableUpgradeable {
         uint256 notClaimedUNICs = IUnicFarm(UNIC_MASTERCHEF).pendingUnic(_pid, address(this));
         if (notClaimedUNICs > 0) {
             uint256 xUNICRate = getxUNICRate();
-            uint256 accXUNICPerShare = pool.accXUNICPerShare + ((notClaimedUNICs * 1e18 / xUNICRate) * 1e12 / pool.totalLPTokens);
-            uint256 pendingXUNICs = ((accXUNICPerShare * user.amount) / 1e12) - user.rewardDebt;
+            uint256 accXUNICPerShare = pool.accXUNICPerShare.add(notClaimedUNICs.mul(1e18).div(xUNICRate).mul(1e12).div(pool.totalLPTokens));
+            uint256 pendingXUNICs = ((accXUNICPerShare.mul(user.amount)).div(1e12)).sub(user.rewardDebt);
             return pendingXUNICs;
         }
-        uint256 pendingXUNICs = ((pool.accXUNICPerShare * user.amount) / 1e12) - user.rewardDebt;
+        uint256 pendingXUNICs = (pool.accXUNICPerShare.mul(user.amount).div(1e12)).sub(user.rewardDebt);
         return pendingXUNICs;
     }
 
