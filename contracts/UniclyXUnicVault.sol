@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./interfaces/IUnicFarm.sol";
 import "./interfaces/IUnicGallery.sol";
+import "hardhat/console.sol"; // TODO: Remove
 
 contract UniclyXUnicVault is OwnableUpgradeable {
     using SafeMath for uint256;
@@ -16,7 +17,7 @@ contract UniclyXUnicVault is OwnableUpgradeable {
     address public constant UNIC = address(0x94E0BAb2F6Ab1F19F4750E42d7349f2740513aD5);
     address public constant UNIC_MASTERCHEF = address(0x4A25E4DF835B605A5848d2DB450fA600d96ee818);
 
-    // TODO: ADD EVENTS
+    // TODO: ADD EVENTS - Deposit, withdraw, doHardWork
 
     // Info of each user.
     struct UserInfo {
@@ -41,14 +42,17 @@ contract UniclyXUnicVault is OwnableUpgradeable {
 
     // dev fee
     address public devAddress;
-    uint public devFee;
+    uint public devFee; // TODO: hardcoded 10 percetnage
     uint public maxDevFee = 150;
     uint public devFeeDenominator = 1000;
+
+    // TODO: Add update _devAddress
 
     function initialize(address _devAddress, uint _devFee) external initializer {
         __Ownable_init();
         devAddress = _devAddress;
         devFee = _devFee;
+        console.log("_devFee", _devFee);
         require(devFee <= maxDevFee, "dev fee");
         IERC20(UNIC).approve(XUNIC, uint(~0));
     }
@@ -88,6 +92,7 @@ contract UniclyXUnicVault is OwnableUpgradeable {
         updatePool(_pid);
         if (user.amount > 0) {
             uint256 pending = pendingxUNICs(_pid, msg.sender);
+            console.log("rotem", pending);
             if (pending > 0) {
                 safexUNICTransfer(msg.sender, pending);
             }
@@ -113,12 +118,9 @@ contract UniclyXUnicVault is OwnableUpgradeable {
     function doHardWork() public {
         for (uint256 i = 0; i < IUnicFarm(UNIC_MASTERCHEF).poolLength(); i++) {
             if (poolInfo[i].totalLPTokens > 0) {
+                // TODO: If 12h passed only
                 updatePool(i);
             }
-        }
-        uint256 balanceOfUNIC = IERC20(UNIC).balanceOf(address(this));
-        if (balanceOfUNIC > 0) {
-            IUnicGallery(XUNIC).enter(balanceOfUNIC);
         }
     }
 
@@ -169,9 +171,11 @@ contract UniclyXUnicVault is OwnableUpgradeable {
             uint256 xUNICRate = getxUNICRate();
             uint256 accXUNICPerShare = pool.accXUNICPerShare.add(notClaimedUNICs.mul(1e18).div(xUNICRate).mul(1e12).div(pool.totalLPTokens));
             uint256 pendingXUNICs = ((accXUNICPerShare.mul(user.amount)).div(1e12)).sub(user.rewardDebt);
+            console.log("pendingXUNICs 1", pendingXUNICs);
             return pendingXUNICs;
         }
         uint256 pendingXUNICs = (pool.accXUNICPerShare.mul(user.amount).div(1e12)).sub(user.rewardDebt);
+        console.log("pendingXUNICs 2", pendingXUNICs);
         return pendingXUNICs;
     }
 

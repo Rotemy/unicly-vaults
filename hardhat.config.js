@@ -19,12 +19,20 @@ module.exports = {
       },
     ]
   }, 
-  defaultNetwork: "local",
+  defaultNetwork: "hardhat",
   networks: {
-    local: {
-      url: "http://localhost:8545",
-      timeout: 100000
-    }
+    hardhat: {
+      forking: {
+        blockNumber: 12846192,
+        url: "https://eth-mainnet.alchemyapi.io/v2/T2CqQfiMJI3yJa1BTnfQfPG6hcfir7Tn"// TODO + configFile().alchemyKey,
+      },
+      blockGasLimit: 12e6
+    },
+  },
+  mocha: {
+    timeout: 120000,
+    retries: 0,
+    bail: true,
   },
   abiExporter: {
     flat: true

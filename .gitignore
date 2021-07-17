@@ -4,3 +4,5 @@
 /build
 /abi
 /.env
+.idea/
+.config.json
