@@ -141,6 +141,27 @@ contract UniclyXUnicVault is OwnableUpgradeable {
         }
     }
 
+    // withdraws without xUNIC reward, emergency only
+    function emergencyWithdraw(uint256 _pid, uint256 _amount) external {
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][msg.sender];
+        require(user.amount >= _amount, "withdraw: not good");
+        if (_amount > 0) {
+            user.amount = user.amount.sub(_amount);
+            pool.totalLPTokens = pool.totalLPTokens.sub(_amount);
+            IUnicFarm(UNIC_MASTERCHEF).withdraw(_pid, _amount);
+            (IERC20 lpToken,,,,) = IUnicFarm(UNIC_MASTERCHEF).poolInfo(_pid);
+            lpToken.safeTransfer(address(msg.sender), _amount);
+        }
+        user.rewardDebt = user.amount.mul(pool.accXUNICPerShare).div(1e12);
+    }
+
+    // salvage purpose only for when stupid people send tokens here
+    function withdrawToken(address tokenToWithdraw, uint amount) external onlyOwner {
+        require(tokenToWithdraw != XUNIC, "Can't salvage xunic");
+        IERC20(tokenToWithdraw).transfer(msg.sender, amount);
+    }
+
     function pendingxUNICs(uint256 _pid, address _user) public view returns (uint256) {
         PoolInfo memory pool = poolInfo[_pid];
         UserInfo memory user = userInfo[_pid][_user];
