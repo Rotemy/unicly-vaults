@@ -97,7 +97,7 @@ contract UniclyXUnicVault is OwnableUpgradeable {
         if (_amount > 0) {
             (IERC20 lpToken,,,,) = IUnicFarm(UNIC_MASTERCHEF).poolInfo(_pid);
             lpToken.safeTransferFrom(
-                address(_user),
+                address(msg.sender),
                 address(this),
                 _amount
             );
