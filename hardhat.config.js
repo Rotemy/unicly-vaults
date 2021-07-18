@@ -1,6 +1,8 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
 require("hardhat-abi-exporter");
+require("hardhat-gas-reporter");
+const config = require("./.config.json");
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
@@ -24,10 +26,15 @@ module.exports = {
     hardhat: {
       forking: {
         blockNumber: 12846192,
-        url: "https://eth-mainnet.alchemyapi.io/v2/T2CqQfiMJI3yJa1BTnfQfPG6hcfir7Tn"// TODO + configFile().alchemyKey,
+        url: `https://eth-mainnet.alchemyapi.io/v2/${config.alchemyKey}`
       },
       blockGasLimit: 12e6
     },
+  },
+  gasReporter: {
+    currency: "USD",
+    coinmarketcap: config.coinmarketcapKey,
+    showTimeSpent: true,
   },
   mocha: {
     timeout: 120000,
