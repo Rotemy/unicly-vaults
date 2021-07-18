@@ -83,6 +83,7 @@ contract UniclyXUnicVault is OwnableUpgradeable {
         depositFor(_pid, _amount, msg.sender);
     }
 
+    // Deposit LP tokens for someone else than msg.sender, mainly for zap functionality
     function depositFor(uint256 _pid, uint256 _amount, address _user) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
