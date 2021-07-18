@@ -80,19 +80,23 @@ contract UniclyXUnicVault is OwnableUpgradeable {
 
     // Deposit LP tokens to MasterChef for unics allocation.
     function deposit(uint256 _pid, uint256 _amount) public {
+        depositFor(_pid, _amount, msg.sender);
+    }
+
+    function depositFor(uint256 _pid, uint256 _amount, address _user) public {
         PoolInfo storage pool = poolInfo[_pid];
-        UserInfo storage user = userInfo[_pid][msg.sender];
+        UserInfo storage user = userInfo[_pid][_user];
         updatePool(_pid);
         if (user.amount > 0) {
             uint256 pending = (pool.accXUNICPerShare.mul(user.amount).div(1e12)).sub(user.rewardDebt);
             if (pending > 0) {
-                safexUNICTransfer(msg.sender, pending);
+                safexUNICTransfer(_user, pending);
             }
         }
         if (_amount > 0) {
             (IERC20 lpToken,,,,) = IUnicFarm(UNIC_MASTERCHEF).poolInfo(_pid);
             lpToken.safeTransferFrom(
-                address(msg.sender),
+                address(_user),
                 address(this),
                 _amount
             );
@@ -105,7 +109,7 @@ contract UniclyXUnicVault is OwnableUpgradeable {
             pool.totalLPTokens = pool.totalLPTokens.add(_amount);
         }
         user.rewardDebt = user.amount.mul(pool.accXUNICPerShare).div(1e12);
-        emit Deposit(msg.sender, _pid, _amount);
+        emit Deposit(_user, _pid, _amount);
     }
 
     function doHardWork() public {
