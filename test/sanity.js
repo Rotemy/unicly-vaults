@@ -17,20 +17,22 @@ describe("UniclyXUnicVault", function () {
     let xUnicToken;
     let unicEthLpToken;
     let owner;
-    let addr1;
-    let addr2;
-    let addr3;
-    let addr4;
+    let addr1, addr2, addr3, addr4, addr5;
     let addrs;
     let deadline;
     let unicswapRouter;
+    let zap;
 
     before(async function () {
         const uniclyXUnicVaultFactory = await ethers.getContractFactory("UniclyXUnicVault");
-        [owner, addr1, addr2, addr3, addr4, ...addrs] = await ethers.getSigners();
+        const zapFactory = await ethers.getContractFactory("Zap");
+        [owner, addr1, addr2, addr3, addr4, addr5, ...addrs] = await ethers.getSigners();
         uniclyXUnicVault = await uniclyXUnicVaultFactory.deploy();
         await uniclyXUnicVault.deployed();
         await uniclyXUnicVault.initialize(owner.address);
+        zap = await zapFactory.deploy();
+        await zap.deployed();
+        await zap.initialize(uniclyXUnicVault.address);
 
         // purchase UNIC
         unicswapRouter = new ethers.Contract(unicswapRouterAddress, unicswapRouterAbi, owner);
@@ -180,6 +182,54 @@ describe("UniclyXUnicVault", function () {
                 }
             });
             expect(numberOfUpdatedPools).to.equal(1);
+        });
+    });
+
+    describe("Zap and deposit", function () {
+        const UNIC_ETH_POOL_ID = 0;
+        const uAPE_ETH_POOL_ID = 21;
+
+        it("Should zap and deposit BNB -> UNICETH-LP", async function () {
+            let user5StakeInfo;
+            user5StakeInfo = await uniclyXUnicVault.userInfo(UNIC_ETH_POOL_ID, addr5.address);
+            expect(user5StakeInfo.amount.toString()).to.equal('0');
+            await zap.connect(addr5).zapInAndDeposit(
+                unicEthLpAddress,
+                UNIC_ETH_POOL_ID,
+                { value: ethers.utils.parseEther("1") }
+            );
+            user5StakeInfo = await uniclyXUnicVault.userInfo(UNIC_ETH_POOL_ID, addr5.address);
+            expect(user5StakeInfo.amount.toString()).to.have.length.above(1);
+        });
+
+        it("Should zap and deposit UNIC -> UNICETH-LP", async function () {
+            const user5PreStakeInfo = await uniclyXUnicVault.userInfo(UNIC_ETH_POOL_ID, addr5.address);
+            //expect(user5StakeInfo.amount.toString()).to.equal('0');
+            await unicToken.transfer(addr5.address, ethers.utils.parseEther("10"));
+            await unicToken.connect(addr5).approve(zap.address, ethers.utils.parseEther("1000000"));
+            await zap.connect(addr5).zapInTokenAndDeposit(
+                unicAddress,
+                ethers.utils.parseEther("5"),
+                unicEthLpAddress,
+                UNIC_ETH_POOL_ID
+            );
+            const user5PostStakeInfo = await uniclyXUnicVault.userInfo(UNIC_ETH_POOL_ID, addr5.address);
+            expect(user5PostStakeInfo.amount.sub(user5PreStakeInfo.amount).toString()).to.have.length.above(1);
+        });
+
+        it("Should zap and deposit UNIC -> UAPEETH-LP", async function () {
+            let user4StakeInfo;
+            user4StakeInfo = await uniclyXUnicVault.userInfo(uAPE_ETH_POOL_ID, addr4.address);
+            await unicToken.transfer(addr4.address, ethers.utils.parseEther("10"));
+            await unicToken.connect(addr4).approve(zap.address, ethers.utils.parseEther("1000000"));
+            await zap.connect(addr4).zapInTokenAndDeposit(
+                unicAddress,
+                ethers.utils.parseEther("5"),
+                uAPELPToken,
+                uAPE_ETH_POOL_ID
+            );
+            user4StakeInfo = await uniclyXUnicVault.userInfo(uAPE_ETH_POOL_ID, addr4.address);
+            expect(user4StakeInfo.amount.toString()).to.have.length.above(1);
         });
     });
 });
