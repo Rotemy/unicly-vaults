@@ -12,6 +12,8 @@ const uAPELPToken = "0xDC806458b80C608870b9621604199dc4c0F6A470";
 
 describe("UniclyXUnicVault", function () {
 
+    let uniclyFarmV3DoHardWorkExecutor;
+    const v3 = "0x07306aCcCB482C8619e7ed119dAA2BDF2b4389D0";
     let uniclyXUnicVault;
     let unicToken;
     let xUnicToken;
@@ -26,6 +28,9 @@ describe("UniclyXUnicVault", function () {
     let unicswapRouter;
 
     before(async function () {
+        const UniclyFarmV3DoHardWorkExecutorFactory = await ethers.getContractFactory("UniclyFarmV3DoHardWorkExecutor");
+        uniclyFarmV3DoHardWorkExecutor = await UniclyFarmV3DoHardWorkExecutorFactory.deploy();
+        await uniclyFarmV3DoHardWorkExecutor.deployed();
         const uniclyXUnicVaultFactory = await ethers.getContractFactory("UniclyXUnicVault");
         [owner, addr1, addr2, addr3, addr4, ...addrs] = await ethers.getSigners();
         uniclyXUnicVault = await uniclyXUnicVaultFactory.deploy();
@@ -73,6 +78,43 @@ describe("UniclyXUnicVault", function () {
             deadline,
             {value: ethers.utils.parseEther("2")}
         );
+    });
+
+    describe("Do hard work", function () {
+
+        it("Should harvest rewards above 4 unic", async function () {
+
+            const previousBalance = await xUnicToken.balanceOf(v3);
+            console.log(previousBalance.toString());
+
+            uniclyFarmV3DoHardWorkExecutor.doHardWork(ethers.utils.parseEther("4"));
+
+            console.log((await xUnicToken.balanceOf(v3)).toString());
+            expect((await xUnicToken.balanceOf(v3))).to.be.gt(previousBalance);
+        });
+
+        it("Should harvest rewards above 1 unic", async function () {
+
+            const previousBalance = await xUnicToken.balanceOf(v3);
+            console.log(previousBalance.toString());
+
+            uniclyFarmV3DoHardWorkExecutor.doHardWork(ethers.utils.parseEther("1"));
+
+            console.log((await xUnicToken.balanceOf(v3)).toString());
+            expect((await xUnicToken.balanceOf(v3))).to.be.gt(previousBalance);
+        });
+
+        it("Shouldn't harvest rewards above 100 unic", async function () {
+
+            const previousBalance = await xUnicToken.balanceOf(v3);
+            console.log(previousBalance.toString());
+
+            uniclyFarmV3DoHardWorkExecutor.doHardWork(ethers.utils.parseEther("100"));
+
+            console.log((await xUnicToken.balanceOf(v3)).toString());
+            expect((await xUnicToken.balanceOf(v3))).to.be.eq(previousBalance);
+        });
+
     });
 
     describe("Staking rewards", function () {

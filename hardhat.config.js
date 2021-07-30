@@ -19,13 +19,22 @@ module.exports = {
           }
         }
       },
+      {
+        version: "0.8.4",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 2000
+          }
+        }
+      },
     ]
   }, 
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
       forking: {
-        blockNumber: 12846192,
+        blockNumber: 12927727,
         url: `https://eth-mainnet.alchemyapi.io/v2/${config.alchemyKey}`
       },
       blockGasLimit: 12e6
