@@ -7,8 +7,10 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./interfaces/IZap.sol";
 import "./interfaces/IUniclyXUnicVault.sol";
+import "./interfaces/IUnicFarm.sol";
 import "./interfaces/IUnicSwapV2Pair.sol";
 import "./interfaces/IUnicSwapV2Router02.sol";
+import "./interfaces/IUniswapV2Router02.sol";
 import "./interfaces/IWETH.sol";
 
 
@@ -23,18 +25,18 @@ contract Zap is IZap, OwnableUpgradeable {
     address private constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address private constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address private constant UNIC = 0x94E0BAb2F6Ab1F19F4750E42d7349f2740513aD5;
-    address private constant XUNIC = 0x4A25E4DF835B605A5848d2DB450fA600d96ee818;
 
-    IUnicSwapV2Router02 private constant ROUTER = IUnicSwapV2Router02(0xE6E90bC9F3b95cdB69F48c7bFdd0edE1386b135a);
-    // TODO: address! for now must be configurable
-    // IUniclyXUnicVault private constant XUNICVAULT = IUniclyXUnicVault();
+    IUnicFarm private constant UNIC_FARM = IUnicFarm(0x4A25E4DF835B605A5848d2DB450fA600d96ee818);
+    IUnicSwapV2Router02 private constant UNIC_ROUTER = IUnicSwapV2Router02(0xE6E90bC9F3b95cdB69F48c7bFdd0edE1386b135a);
+    IUniswapV2Router02 private constant UNI_ROUTER = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
 
     /* ========== STATE VARIABLES ========== */
 
     mapping(address => bool) private notLP;
+    mapping(address => bool) private uniclySupported;
     mapping(address => address) private routePairAddresses;
     mapping(address => bool) private haveApprovedToken;
-    address[] public tokens;
+
     // TODO: remove? hardcode once unicly vault is deployed
     IUniclyXUnicVault private xUnicVault;
 
@@ -49,7 +51,9 @@ contract Zap is IZap, OwnableUpgradeable {
         setNotLP(USDC);
         setNotLP(DAI);
         setNotLP(UNIC);
-        setNotLP(XUNIC);
+
+        setUniclySupported(WETH);
+        setUniclySupported(UNIC);
 
         xUnicVault = IUniclyXUnicVault(_xUnicVault);
     }
@@ -57,6 +61,10 @@ contract Zap is IZap, OwnableUpgradeable {
     receive() external payable {}
 
     /* ========== View Functions ========== */
+
+    function isNotUniclySupported(address _address) public view returns (bool) {
+        return !uniclySupported[_address];
+    }
 
     function isLP(address _address) public view returns (bool) {
         return !notLP[_address];
@@ -68,25 +76,25 @@ contract Zap is IZap, OwnableUpgradeable {
 
     /* ========== External Functions ========== */
 
-    function zapInTokenAndDeposit(address _from, uint amount, address _to, uint _pid) external {
-        zapInTokenFor(_from, amount, _to, address(this));
-        _approveTokenIfNeeded(_to);
-        uint depositAmount = IERC20(_to).balanceOf(address(this));
+    function zapInTokenAndDeposit(address _from, uint amount, uint _pid) external override {
+        (IERC20 lpToken,,,,) = UNIC_FARM.poolInfo(_pid);
+        zapInTokenFor(_from, amount, address(lpToken));
+        _approveTokenIfNeeded(address(lpToken));
+        uint depositAmount = lpToken.balanceOf(address(this));
         xUnicVault.depositFor(_pid, depositAmount, msg.sender);
     }
 
-    function zapInAndDeposit(address _to, uint _pid) external payable {
-        _swapETHToLP(_to, msg.value, address(this));
-        _approveTokenIfNeeded(_to);
-        uint depositAmount = IERC20(_to).balanceOf(address(this));
+    function zapInAndDeposit(uint _pid) external override payable {
+        (IERC20 lpToken,,,,) = UNIC_FARM.poolInfo(_pid);
+        _swapETHToLP(address(lpToken), msg.value);
+        _approveTokenIfNeeded(address(lpToken));
+        uint depositAmount = lpToken.balanceOf(address(this));
         xUnicVault.depositFor(_pid, depositAmount, msg.sender);
     }
 
-    function zapInToken(address _from, uint amount, address _to) external override {
-        zapInTokenFor(_from, amount, _to, msg.sender);
-    }
+    /* ========== Private Functions ========== */
 
-    function zapInTokenFor(address _from, uint amount, address _to, address _recipient) internal {
+    function zapInTokenFor(address _from, uint amount, address _to) private {
         IERC20(_from).safeTransferFrom(msg.sender, address(this), amount);
         _approveTokenIfNeeded(_from);
 
@@ -99,52 +107,20 @@ contract Zap is IZap, OwnableUpgradeable {
                 address other = _from == token0 ? token1 : token0;
                 _approveTokenIfNeeded(other);
                 uint sellAmount = amount.div(2);
-                uint otherAmount = _swap(_from, sellAmount, other, address(this));
-                ROUTER.addLiquidity(_from, other, amount.sub(sellAmount), otherAmount, 0, 0, _recipient, block.timestamp);
+                uint otherAmount = _swap(_from, sellAmount, other);
+                UNIC_ROUTER.addLiquidity(_from, other, amount.sub(sellAmount), otherAmount, 0, 0, address(this), block.timestamp);
             } else {
-                uint ethAmount = _swapTokenForETH(_from, amount, address(this));
-                _swapETHToLP(_to, ethAmount, _recipient);
+                uint ethAmount = _swapTokenForETH(_from, amount);
+                _swapETHToLP(_to, ethAmount);
             }
         } else {
-            _swap(_from, amount, _to, _recipient);
+            _swap(_from, amount, _to);
         }
     }
 
-    function zapIn(address _to) external payable override {
-        _swapETHToLP(_to, msg.value, msg.sender);
-    }
-
-    function zapOut(address _from, uint amount) external override {
-        IERC20(_from).safeTransferFrom(msg.sender, address(this), amount);
-        _approveTokenIfNeeded(_from);
-
-        if (!isLP(_from)) {
-            _swapTokenForETH(_from, amount, msg.sender);
-        } else {
-            IUnicSwapV2Pair pair = IUnicSwapV2Pair(_from);
-            address token0 = pair.token0();
-            address token1 = pair.token1();
-            if (token0 == WETH || token1 == WETH) {
-                ROUTER.removeLiquidityETH(token0 != WETH ? token0 : token1, amount, 0, 0, msg.sender, block.timestamp);
-            } else {
-                ROUTER.removeLiquidity(token0, token1, amount, 0, 0, msg.sender, block.timestamp);
-            }
-        }
-    }
-
-    /* ========== Private Functions ========== */
-
-    function _approveTokenIfNeeded(address token) private {
-        if (!haveApprovedToken[token]) {
-            IERC20(token).safeApprove(address(ROUTER), uint(- 1));
-            IERC20(token).safeApprove(address(xUnicVault), uint(- 1));
-            haveApprovedToken[token] = true;
-        }
-    }
-
-    function _swapETHToLP(address lp, uint amount, address receiver) private {
+    function _swapETHToLP(address lp, uint amount) private {
         if (!isLP(lp)) {
-            _swapETHForToken(lp, amount, receiver);
+            _swapETHForToken(lp, amount);
         } else {
             // lp
             IUnicSwapV2Pair pair = IUnicSwapV2Pair(lp);
@@ -153,23 +129,23 @@ contract Zap is IZap, OwnableUpgradeable {
             if (token0 == WETH || token1 == WETH) {
                 address token = token0 == WETH ? token1 : token0;
                 uint swapValue = amount.div(2);
-                uint tokenAmount = _swapETHForToken(token, swapValue, address(this));
+                uint tokenAmount = _swapETHForToken(token, swapValue);
 
                 _approveTokenIfNeeded(token);
-                ROUTER.addLiquidityETH{value : amount.sub(swapValue)}(token, tokenAmount, 0, 0, receiver, block.timestamp);
+                UNIC_ROUTER.addLiquidityETH{value : amount.sub(swapValue)}(token, tokenAmount, 0, 0, address(this), block.timestamp);
             } else {
                 uint swapValue = amount.div(2);
-                uint token0Amount = _swapETHForToken(token0, swapValue, address(this));
-                uint token1Amount = _swapETHForToken(token1, amount.sub(swapValue), address(this));
+                uint token0Amount = _swapETHForToken(token0, swapValue);
+                uint token1Amount = _swapETHForToken(token1, amount.sub(swapValue));
 
                 _approveTokenIfNeeded(token0);
                 _approveTokenIfNeeded(token1);
-                ROUTER.addLiquidity(token0, token1, token0Amount, token1Amount, 0, 0, receiver, block.timestamp);
+                UNIC_ROUTER.addLiquidity(token0, token1, token0Amount, token1Amount, 0, 0, address(this), block.timestamp);
             }
         }
     }
 
-    function _swapETHForToken(address token, uint value, address receiver) private returns (uint) {
+    function _swapETHForToken(address token, uint value) private returns (uint) {
         address[] memory path;
 
         if (routePairAddresses[token] != address(0)) {
@@ -183,11 +159,11 @@ contract Zap is IZap, OwnableUpgradeable {
             path[1] = token;
         }
 
-        uint[] memory amounts = ROUTER.swapExactETHForTokens{value : value}(0, path, receiver, block.timestamp);
+        uint[] memory amounts = UNIC_ROUTER.swapExactETHForTokens{value : value}(0, path, address(this), block.timestamp);
         return amounts[amounts.length - 1];
     }
 
-    function _swapTokenForETH(address token, uint amount, address receiver) private returns (uint) {
+    function _swapTokenForETH(address token, uint amount) private returns (uint) {
         address[] memory path;
         if (routePairAddresses[token] != address(0)) {
             path = new address[](3);
@@ -200,11 +176,16 @@ contract Zap is IZap, OwnableUpgradeable {
             path[1] = WETH;
         }
 
-        uint[] memory amounts = ROUTER.swapExactTokensForETH(amount, 0, path, receiver, block.timestamp);
+        uint[] memory amounts;
+        if (isNotUniclySupported(token)) {
+            amounts = UNI_ROUTER.swapExactTokensForETH(amount, 0, path, address(this), block.timestamp);
+        } else {
+            amounts = UNIC_ROUTER.swapExactTokensForETH(amount, 0, path, address(this), block.timestamp);
+        }
         return amounts[amounts.length - 1];
     }
 
-    function _swap(address _from, uint amount, address _to, address receiver) private returns (uint) {
+    function _swap(address _from, uint amount, address _to) private returns (uint) {
         address intermediate = routePairAddresses[_from];
         if (intermediate == address(0)) {
             intermediate = routePairAddresses[_to];
@@ -264,8 +245,17 @@ contract Zap is IZap, OwnableUpgradeable {
             path[2] = _to;
         }
 
-        uint[] memory amounts = ROUTER.swapExactTokensForTokens(amount, 0, path, receiver, block.timestamp);
+        uint[] memory amounts = UNIC_ROUTER.swapExactTokensForTokens(amount, 0, path, address(this), block.timestamp);
         return amounts[amounts.length - 1];
+    }
+
+    function _approveTokenIfNeeded(address token) private {
+        if (!haveApprovedToken[token]) {
+            IERC20(token).safeApprove(address(UNIC_ROUTER), uint(- 1));
+            IERC20(token).safeApprove(address(UNI_ROUTER), uint(- 1));
+            IERC20(token).safeApprove(address(xUnicVault), uint(- 1));
+            haveApprovedToken[token] = true;
+        }
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -274,39 +264,12 @@ contract Zap is IZap, OwnableUpgradeable {
         routePairAddresses[asset] = route;
     }
 
+    function setUniclySupported(address token) public onlyOwner {
+        uniclySupported[token] = true;
+    }
+
     function setNotLP(address token) public onlyOwner {
-        bool needPush = notLP[token] == false;
         notLP[token] = true;
-        if (needPush) {
-            tokens.push(token);
-        }
-    }
-
-    function removeToken(uint i) external onlyOwner {
-        address token = tokens[i];
-        notLP[token] = false;
-        tokens[i] = tokens[tokens.length - 1];
-        tokens.pop();
-    }
-
-    function sweep() external onlyOwner {
-        for (uint i = 0; i < tokens.length; i++) {
-            address token = tokens[i];
-            if (token == address(0)) continue;
-            uint amount = IERC20(token).balanceOf(address(this));
-            if (amount > 0) {
-                if (token == WETH) {
-                    IWETH(token).withdraw(amount);
-                } else {
-                    _swapTokenForETH(token, amount, owner());
-                }
-            }
-        }
-
-        uint balance = address(this).balance;
-        if (balance > 0) {
-            payable(owner()).transfer(balance);
-        }
     }
 
     function withdraw(address token) external onlyOwner {

@@ -2,7 +2,6 @@
 pragma solidity ^0.6.12;
 
 interface IZap {
-    function zapOut(address _from, uint amount) external;
-    function zapIn(address _to) external payable;
-    function zapInToken(address _from, uint amount, address _to) external;
+    function zapInTokenAndDeposit(address _from, uint amount, uint _pid) external;
+    function zapInAndDeposit(uint _pid) external payable;
 }
