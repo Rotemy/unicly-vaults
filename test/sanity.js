@@ -18,6 +18,7 @@ const usdcAddress = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 describe("UniclyXUnicVault", function () {
 
     let uniclyFarmV3DoHardWorkExecutor;
+    let uniclyFarmV3DoHardWorkExecutorV2;
     const v3 = "0x07306aCcCB482C8619e7ed119dAA2BDF2b4389D0";
     let uniclyXUnicVault;
     let unicToken;
@@ -33,8 +34,11 @@ describe("UniclyXUnicVault", function () {
 
     before(async function () {
         const UniclyFarmV3DoHardWorkExecutorFactory = await ethers.getContractFactory("UniclyFarmV3DoHardWorkExecutor");
+        const UniclyFarmV3DoHardWorkExecutorV2 = await ethers.getContractFactory("UniclyFarmV3DoHardWorkExecutorV2");
         uniclyFarmV3DoHardWorkExecutor = await UniclyFarmV3DoHardWorkExecutorFactory.deploy();
+        uniclyFarmV3DoHardWorkExecutorV2 = await UniclyFarmV3DoHardWorkExecutorV2.deploy();
         await uniclyFarmV3DoHardWorkExecutor.deployed();
+        await uniclyFarmV3DoHardWorkExecutorV2.deployed();
         const uniclyXUnicVaultFactory = await ethers.getContractFactory("UniclyXUnicVault");
         const zapFactory = await ethers.getContractFactory("Zap");
         [owner, addr1, addr2, addr3, addr4, addr5, addr6, addr7, ...addrs] = await ethers.getSigners();
@@ -102,36 +106,30 @@ describe("UniclyXUnicVault", function () {
 
     describe("Do hard work", function () {
 
-        it("Should harvest rewards above 4 unic", async function () {
+        it("Should harvest rewards for x pools", async function () {
 
             const previousBalance = await xUnicToken.balanceOf(v3);
-            console.log(previousBalance.toString());
 
-            uniclyFarmV3DoHardWorkExecutor.doHardWork(ethers.utils.parseEther("4"));
+            uniclyFarmV3DoHardWorkExecutorV2.doHardWork(["0", "1", "2", "3", "4", "5", "6"]);
 
-            console.log((await xUnicToken.balanceOf(v3)).toString());
             expect((await xUnicToken.balanceOf(v3))).to.be.gt(previousBalance);
         });
 
         it("Should harvest rewards above 1 unic", async function () {
 
             const previousBalance = await xUnicToken.balanceOf(v3);
-            console.log(previousBalance.toString());
 
             uniclyFarmV3DoHardWorkExecutor.doHardWork(ethers.utils.parseEther("1"));
 
-            console.log((await xUnicToken.balanceOf(v3)).toString());
             expect((await xUnicToken.balanceOf(v3))).to.be.gt(previousBalance);
         });
 
         it("Shouldn't harvest rewards above 100 unic", async function () {
 
             const previousBalance = await xUnicToken.balanceOf(v3);
-            console.log(previousBalance.toString());
 
             uniclyFarmV3DoHardWorkExecutor.doHardWork(ethers.utils.parseEther("100"));
 
-            console.log((await xUnicToken.balanceOf(v3)).toString());
             expect((await xUnicToken.balanceOf(v3))).to.be.eq(previousBalance);
         });
 
