@@ -1,3 +1,4 @@
+require("dotenv").config();
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
 require("hardhat-abi-exporter");
@@ -39,6 +40,10 @@ module.exports = {
       },
       blockGasLimit: 12e6
     },
+    rinkeby: {
+      url: "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+      accounts: process.env.PRIVATE_KEY ? [ process.env.PRIVATE_KEY ] : []
+    }
   },
   gasReporter: {
     currency: "USD",
