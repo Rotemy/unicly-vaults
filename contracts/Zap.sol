@@ -10,7 +10,6 @@ import "./interfaces/IUniclyXUnicVault.sol";
 import "./interfaces/IUnicFarm.sol";
 import "./interfaces/IUnicSwapV2Pair.sol";
 import "./interfaces/IUnicSwapV2Router02.sol";
-import "./interfaces/IUniswapV2Router02.sol";
 
 contract Zap is IZap, OwnableUpgradeable {
     using SafeMath for uint;
@@ -26,7 +25,7 @@ contract Zap is IZap, OwnableUpgradeable {
 
     IUnicFarm private constant UNIC_FARM = IUnicFarm(0x4A25E4DF835B605A5848d2DB450fA600d96ee818);
     IUnicSwapV2Router02 private constant UNIC_ROUTER = IUnicSwapV2Router02(0xE6E90bC9F3b95cdB69F48c7bFdd0edE1386b135a);
-    IUniswapV2Router02 private constant UNI_ROUTER = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+    IUnicSwapV2Router02 private constant UNI_ROUTER = IUnicSwapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
 
     /* ========== STATE VARIABLES ========== */
 
