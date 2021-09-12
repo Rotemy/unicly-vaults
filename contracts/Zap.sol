@@ -11,8 +11,6 @@ import "./interfaces/IUnicFarm.sol";
 import "./interfaces/IUnicSwapV2Pair.sol";
 import "./interfaces/IUnicSwapV2Router02.sol";
 import "./interfaces/IUniswapV2Router02.sol";
-import "./interfaces/IWETH.sol";
-
 
 contract Zap is IZap, OwnableUpgradeable {
     using SafeMath for uint;
@@ -37,7 +35,6 @@ contract Zap is IZap, OwnableUpgradeable {
     mapping(address => address) private routePairAddresses;
     mapping(address => bool) private haveApprovedToken;
 
-    // TODO: remove? hardcode once unicly vault is deployed
     IUniclyXUnicVault private xUnicVault;
 
     /* ========== INITIALIZER ========== */
